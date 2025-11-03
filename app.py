@@ -223,9 +223,15 @@ def get_books():
 # ---------------------------- YouTube Search ----------------------------
 def search_youtube_sync(query: str, max_results: int = 10) -> List[Dict[str, Any]]:
     """Search YouTube for audiobook content matching the query"""
+    # Check if "full audiobook" is already in the query to avoid duplication
+    if "full audiobook" not in query.lower():
+        enhanced_query = f"{query} full audiobook"
+    else:
+        enhanced_query = query
+    
     try:
         # Use youtube-search-python library to search
-        results = YoutubeSearch(query, max_results=max_results).to_dict()
+        results = YoutubeSearch(enhanced_query, max_results=max_results).to_dict()
         
         formatted_results = []
         for result in results:
@@ -242,7 +248,7 @@ def search_youtube_sync(query: str, max_results: int = 10) -> List[Dict[str, Any
         
         return formatted_results
     except Exception as e:
-        logger.error(f"Error searching YouTube for '{query}': {str(e)}")
+        logger.error(f"Error searching YouTube for '{enhanced_query}': {str(e)}")
         return []
 
 @app.route('/search', methods=['POST'])
@@ -252,11 +258,14 @@ def search_audiobooks():
     query = payload.get("query", "")
     max_results = payload.get("maxResults", 10)
     
-    logger.info(f"Searching YouTube for: '{query}'")
+    # Automatically append "full audiobook" to improve search results
+    enhanced_query = f"{query} full audiobook"
+    
+    logger.info(f"Searching YouTube for: '{enhanced_query}' (original: '{query}')")
     
     try:
-        results = search_youtube_sync(query, max_results)
-        logger.info(f"Found {len(results)} results for: '{query}'")
+        results = search_youtube_sync(enhanced_query, max_results)
+        logger.info(f"Found {len(results)} results for: '{enhanced_query}'")
         return jsonify({"results": results, "query": query})
     except Exception as e:
         error_msg = f"YouTube search failed: {str(e)}"
