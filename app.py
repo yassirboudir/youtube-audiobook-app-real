@@ -93,7 +93,7 @@ def extract_author_title(folder_name: str) -> tuple[str, str]:
     return "", folder_name.strip()
 
 def scan_book_files() -> List[Dict[str, str]]:
-    """Scan the current_books_dir for book files and folders and extract author/title info"""
+    """Scan the current_books_dir for book files and folders and extract author/title info, including Author/Book structure"""
     book_items = []
     
     books_path = Path(current_books_dir)
@@ -106,18 +106,51 @@ def scan_book_files() -> List[Dict[str, str]]:
     
     for item in books_path.iterdir():
         if item.is_dir():
-            # Handle directories (existing behavior)
-            author, title = extract_author_title(item.name)
-            book_items.append({
-                "item_name": item.name,
-                "full_path": str(item.absolute()),
-                "author": author,
-                "title": title,
-                "search_query": f"{title} {author}".strip(),
-                "type": "folder"
-            })
+            # Check if this is an author directory that contains book subdirectories
+            author_name = item.name
+            author_path = item
+            
+            # Look for book directories within the author directory
+            for book_item in author_path.iterdir():
+                if book_item.is_dir():
+                    # This is a book directory inside an author directory
+                    book_name = book_item.name
+                    book_items.append({
+                        "item_name": book_item.name,
+                        "full_path": str(book_item.absolute()),
+                        "author": author_name,
+                        "title": book_name,
+                        "search_query": f"{book_name} {author_name}".strip(),
+                        "type": "folder"
+                    })
+                elif book_item.is_file() and book_item.suffix.lower() in book_extensions:
+                    # This is a book file directly in the author directory
+                    _, book_title = extract_author_title(book_item.stem)
+                    book_items.append({
+                        "item_name": book_item.name,
+                        "full_path": str(book_item.absolute()),
+                        "author": author_name,
+                        "title": book_title,
+                        "search_query": f"{book_title} {author_name}".strip(),
+                        "type": "file"
+                    })
+            
+            # Also handle the case where the first-level directory is just a regular book folder (backward compatibility)
+            # This would be for any directories that don't follow the Author/Book structure
+            # Check if the directory doesn't contain subdirectories that could be books
+            subdirs = [sub for sub in item.iterdir() if sub.is_dir()]
+            if not subdirs:  # If no subdirectories, treat as before
+                author, title = extract_author_title(item.name)
+                book_items.append({
+                    "item_name": item.name,
+                    "full_path": str(item.absolute()),
+                    "author": author,
+                    "title": title,
+                    "search_query": f"{title} {author}".strip(),
+                    "type": "folder"
+                })
         elif item.is_file() and item.suffix.lower() in book_extensions:
-            # Handle book files
+            # Handle book files at the root level
             author, title = extract_author_title(item.stem)  # Use stem (filename without extension)
             book_items.append({
                 "item_name": item.name,
