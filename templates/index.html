@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Audiobook Finder</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: 1px solid rgba(0, 0, 0, 0.125);
+            border-radius: 0.5rem;
+        }
+
+        .book-item {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background-color: white;
+            transition: all 0.2s;
+        }
+
+        .book-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            border-color: #0d6efd;
+        }
+
+        .book-title {
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .book-author {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .youtube-result {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background-color: white;
+            transition: all 0.2s;
+        }
+
+        .youtube-result:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        }
+
+        .result-thumbnail {
+            width: 120px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 0.25rem;
+            margin-right: 1rem;
+        }
+
+        .result-info {
+            flex: 1;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 0.25rem;
+        }
+
+        .result-channel {
+            color: #6c757d;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .result-meta {
+            color: #6c757d;
+            font-size: 0.75rem;
+        }
+
+        .history-item {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background-color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-title {
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .history-author {
+            color: #6c757d;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .history-youtube {
+            color: #0d6efd;
+            font-size: 0.875rem;
+        }
+
+        .history-date {
+            color: #6c757d;
+            font-size: 0.75rem;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+        }
+
+        .status-pending {
+            background-color: #ffc107;
+        }
+
+        .status-downloading {
+            background-color: #0dcaf0;
+        }
+
+        .status-completed {
+            background-color: #198754;
+        }
+
+        .status-failed {
+            background-color: #dc3545;
+        }
+
+        .progress-container {
+            width: 200px;
+            margin: 5px 0;
+        }
+        
+        .progress-text {
+            font-size: 0.75rem;
+            color: #6c757d;
+            text-align: center;
+            margin-top: 2px;
+        }
+
+        .btn-download {
+            min-width: 100px;
+        }
+
+        .search-btn {
+            width: 100%;
+        }
+
+        .modal-xl {
+            max-width: 80%;
+        }
+
+        @media (max-width: 768px) {
+            .result-thumbnail {
+                width: 80px;
+                height: 60px;
+            }
+            
+            .modal-xl {
+                max-width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <header class="mb-4">
+            <h1 class="text-center">
+                <i class="bi bi-music-note-list"></i> YouTube Audiobook Finder
+            </h1>
+            <p class="text-center text-muted">Find and download audiobooks from YouTube as MP3</p>
+        </header>
+
+        <!-- Settings Card -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-gear"></i> Settings
+                        </h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="toggleSettings()">
+                            <i class="bi bi-chevron-down" id="settings-chevron"></i> Configure Paths
+                        </button>
+                    </div>
+                    <div class="card-body" id="settings-body" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="books-dir" class="form-label">Books Directory</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="books-dir" placeholder="Path to books directory">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="browseDirectory('books')">
+                                            <i class="bi bi-folder2-open"></i> Browse
+                                        </button>
+                                    </div>
+                                    <div class="form-text">Directory containing your book files and folders</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="downloads-dir" class="form-label">Downloads Directory</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="downloads-dir" placeholder="Path to downloads directory">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="browseDirectory('downloads')">
+                                            <i class="bi bi-folder2-open"></i> Browse
+                                        </button>
+                                    </div>
+                                    <div class="form-text">Directory where downloaded audiobooks will be saved</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button class="btn btn-primary" onclick="saveConfig()">
+                                <i class="bi bi-save"></i> Save Configuration
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-journal-bookmark"></i> Your Book Collection
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="book-list">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p>Loading your book folders...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-search"></i> Search Results
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="search-results">
+                            <div class="text-center text-muted">
+                                <i class="bi bi-search display-1"></i>
+                                <p class="mt-2">Select a book to search for matching audiobooks</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clock-history"></i> Download History
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="history-list">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p>Loading download history...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables to store current config
+        let currentConfig = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load configuration and book collection on page load
+            loadConfig();
+            loadBooks();
+            loadHistory();
+        });
+
+        // Toggle settings section visibility
+        function toggleSettings() {
+            const settingsBody = document.getElementById('settings-body');
+            const chevron = document.getElementById('settings-chevron');
+            
+            if (settingsBody.style.display === 'none' || settingsBody.style.display === '') {
+                settingsBody.style.display = 'block';
+                chevron.classList.remove('bi-chevron-down');
+                chevron.classList.add('bi-chevron-up');
+            } else {
+                settingsBody.style.display = 'none';
+                chevron.classList.remove('bi-chevron-up');
+                chevron.classList.add('bi-chevron-down');
+            }
+        }
+
+        // Load current configuration
+        async function loadConfig() {
+            try {
+                const response = await fetch('/config');
+                const data = await response.json();
+                
+                if (data.books_dir && data.download_dir) {
+                    currentConfig = data;
+                    document.getElementById('books-dir').value = data.books_dir;
+                    document.getElementById('downloads-dir').value = data.download_dir;
+                }
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
+
+        // Save configuration
+        async function saveConfig() {
+            const booksDir = document.getElementById('books-dir').value.trim();
+            const downloadsDir = document.getElementById('downloads-dir').value.trim();
+            
+            if (!booksDir || !downloadsDir) {
+                alert('Please fill in both directory paths');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        books_dir: booksDir,
+                        download_dir: downloadsDir
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    currentConfig = data;
+                    alert('Configuration saved successfully!');
+                    // Reload book collection with new path
+                    loadBooks();
+                } else {
+                    alert('Error saving configuration: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving config:', error);
+                alert('Error saving configuration: ' + error.message);
+            }
+        }
+
+        // Simulate directory browsing (in a real implementation, you might use a file dialog)
+        function browseDirectory(type) {
+            // In a real implementation, this would open a native directory picker
+            // For now, we'll show a prompt to enter the path
+            const currentPath = type === 'books' 
+                ? document.getElementById('books-dir').value 
+                : document.getElementById('downloads-dir').value;
+                
+            const newPath = prompt(`Enter the path for ${type} directory:`, currentPath);
+            if (newPath) {
+                if (type === 'books') {
+                    document.getElementById('books-dir').value = newPath;
+                } else {
+                    document.getElementById('downloads-dir').value = newPath;
+                }
+            }
+        }
+
+        // Load book collection
+        async function loadBooks() {
+            try {
+                const response = await fetch('/books');
+                const data = await response.json();
+                
+                const bookList = document.getElementById('book-list');
+                if (data.books.length === 0) {
+                    bookList.innerHTML = `
+                        <div class="text-center text-muted">
+                            <i class="bi bi-journal-x display-1"></i>
+                            <p class="mt-2">No book folders found in the configured directory</p>
+                            <p>Make sure your BOOKS_DIR environment variable points to the correct location</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                data.books.forEach(book => {
+                    html += `
+                        <div class="book-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    ${book.author ? `<div class="book-author">by ${book.author}</div>` : ''}
+                                    <div class="book-title">${book.title || book.folder_name}</div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="searchBook('${book.search_query}', '${book.title}', '${book.author}')">
+                                    <i class="bi bi-search"></i> Find Audiobook
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                bookList.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading books:', error);
+                document.getElementById('book-list').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error loading book collection: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Search for audiobooks for a specific book
+        async function searchBook(query, bookTitle, bookAuthor) {
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query: query, maxResults: 20 })
+                });
+                
+                const data = await response.json();
+                
+                if (data.results && data.results.length === 0) {
+                    document.getElementById('search-results').innerHTML = `
+                        <div class="text-center text-muted">
+                            <i class="bi bi-x-circle display-1"></i>
+                            <p>No results found for "${query}"</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (data.error) {
+                    document.getElementById('search-results').innerHTML = `
+                        <div class="alert alert-danger">
+                            Error: ${data.error}
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = `<h6>Search results for: "${query}"</h6>`;
+                data.results.forEach(result => {
+                    html += `
+                        <div class="youtube-result">
+                            <div class="d-flex">
+                                <img src="${result.thumbnail}" alt="Thumbnail" class="result-thumbnail">
+                                <div class="result-info">
+                                    <div class="result-title">${result.title}</div>
+                                    <div class="result-channel">${result.channel}</div>
+                                    <div class="result-meta">
+                                        ${result.duration} • ${result.view_count} • ${result.publish_time}
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-success" onclick="downloadAudiobook('${bookTitle}', '${bookAuthor}', '${result.url}', '${result.title.replace(/'/g, "\\'")}')">
+                                        <i class="bi bi-download"></i> Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                document.getElementById('search-results').innerHTML = html;
+            } catch (error) {
+                console.error('Error searching:', error);
+                document.getElementById('search-results').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error searching: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Download audiobook
+        async function downloadAudiobook(bookTitle, author, youtubeUrl, youtubeTitle) {
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        book_title: bookTitle,
+                        author: author,
+                        youtube_url: youtubeUrl,
+                        youtube_title: youtubeTitle
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    alert(`Download started for "${youtubeTitle}"`);
+                    // Reload history to show the new download
+                    loadHistory();
+                } else {
+                    alert('Failed to start download');
+                }
+            } catch (error) {
+                console.error('Error downloading:', error);
+                alert('Error starting download: ' + error.message);
+            }
+        }
+
+        // Load download history
+        async function loadHistory() {
+            try {
+                const response = await fetch('/history');
+                const data = await response.json();
+                
+                const historyList = document.getElementById('history-list');
+                if (data.items.length === 0) {
+                    historyList.innerHTML = `
+                        <div class="text-center text-muted">
+                            <i class="bi bi-clock-history display-1"></i>
+                            <p class="mt-2">No download history yet</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                data.items.forEach(item => {
+                    const statusClass = `status-${item.status}`;
+                    const progressHtml = item.status === 'downloading' ? `
+                        <div class="progress-container">
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-info" role="progressbar" 
+                                     style="width: ${item.progress}%;" 
+                                     aria-valuenow="${item.progress}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                            <div class="progress-text">${item.progress.toFixed(1)}%</div>
+                        </div>
+                    ` : '';
+                    
+                    html += `
+                        <div class="history-item" data-download-id="${item.id}">
+                            <div class="history-info">
+                                <div class="history-title">${item.book_title}</div>
+                                <div class="history-author">by ${item.author}</div>
+                                <div class="history-youtube">${item.youtube_title}</div>
+                                <div class="history-date">${new Date(item.added_at).toLocaleString()}</div>
+                                ${progressHtml}
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="badge ${statusClass} status-badge me-2">${item.status}</span>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteHistory(${item.id})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                historyList.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading history:', error);
+                document.getElementById('history-list').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error loading history: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Delete history item
+        async function deleteHistory(id) {
+            if (!confirm('Are you sure you want to delete this history item?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/history/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadHistory();
+                } else {
+                    alert('Failed to delete history item');
+                }
+            } catch (error) {
+                console.error('Error deleting history:', error);
+                alert('Error deleting history: ' + error.message);
+            }
+        }
+
+        // Update progress for individual download
+        async function updateDownloadProgress(downloadId) {
+            try {
+                const response = await fetch(`/progress/${downloadId}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Error getting progress:', data.error);
+                    return;
+                }
+                
+                // Update the specific progress bar in the history list
+                const progressBar = document.querySelector(`[data-download-id="${downloadId}"] .progress-bar`);
+                const progressText = document.querySelector(`[data-download-id="${downloadId}"] .progress-text`);
+                
+                if (progressBar && progressText) {
+                    progressBar.style.width = data.progress + '%';
+                    progressBar.setAttribute('aria-valuenow', data.progress);
+                    progressText.textContent = data.progress.toFixed(1) + '%';
+                    
+                    // Update status badge if download is complete
+                    if (data.status !== 'downloading') {
+                        const statusBadge = document.querySelector(`[data-download-id="${downloadId}"] .status-badge`);
+                        if (statusBadge) {
+                            statusBadge.textContent = data.status;
+                            statusBadge.className = `badge status-${data.status} status-badge me-2`;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating progress:', error);
+            }
+        }
+
+        // Set up periodic progress updates for active downloads
+        function setupProgressUpdates() {
+            // Clear any existing intervals
+            if (window.progressUpdateInterval) {
+                clearInterval(window.progressUpdateInterval);
+            }
+            
+            // Update progress every 2 seconds for active downloads
+            window.progressUpdateInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/history');
+                    const data = await response.json();
+                    
+                    if (data.items) {
+                        data.items.forEach(item => {
+                            if (item.status === 'downloading') {
+                                updateDownloadProgress(item.id);
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error in periodic progress update:', error);
+                }
+            }, 2000); // Update every 2 seconds
+        }
+
+        // Initialize progress updates after page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load book collection on page load
+            loadBooks();
+            loadHistory();
+            
+            // Set up periodic progress updates
+            setupProgressUpdates();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+flask
+flask-sqlalchemy
+youtube-search
+yt-dlp
+python-dotenv

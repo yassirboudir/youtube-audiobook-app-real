@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  youtube-audiobook-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: youtube-audiobook-app
+    ports:
+      - "8080:8080"
+    volumes:
+      - /home/yassir/ebooks/calibre-library:/app/books
+      - /home/yassir/shared-sync/audiobooks:/app/downloads
+      - ./instance:/app/instance
+      - ./.env:/app/.env:ro
+    environment:
+      - BOOKS_DIR=/app/books
+      - DOWNLOAD_DIR=/app/downloads
+    restart: unless-stopped
+    networks:
+      - audiobook-net
+
+networks:
+  audiobook-net:
+    driver: bridge
