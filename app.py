@@ -2,6 +2,7 @@ import os
 import json
 import re
 import logging
+import requests
 from pathlib import Path
 from typing import List, Dict, Any
 from flask import Flask, request, jsonify, render_template
@@ -91,6 +92,37 @@ def extract_author_title(folder_name: str) -> tuple[str, str]:
 
     # If no pattern matches, return folder name as title with empty author
     return "", folder_name.strip()
+
+def extract_video_id(youtube_url: str) -> str:
+    """Extract video ID from YouTube URL"""
+    import urllib.parse
+    parsed = urllib.parse.urlparse(youtube_url)
+    
+    if parsed.hostname in ['youtu.be']:
+        return parsed.path[1:]
+    elif parsed.hostname in ['www.youtube.com', 'youtube.com']:
+        if parsed.path == '/watch':
+            p = urllib.parse.parse_qs(parsed.query)
+            return p.get('v', [None])[0]
+        elif parsed.path.startswith('/embed/'):
+            return parsed.path.split('/')[2]
+        elif parsed.path.startswith('/v/'):
+            return parsed.path.split('/')[2]
+    return None
+
+def download_thumbnail(thumbnail_url: str, output_path: str):
+    """Download thumbnail from URL to specified path"""
+    try:
+        response = requests.get(thumbnail_url, stream=True)
+        if response.status_code == 200:
+            with open(output_path, 'wb') as f:
+                for chunk in response.iter_content(1024):
+                    f.write(chunk)
+            logger.info(f"Thumbnail downloaded successfully to: {output_path}")
+        else:
+            logger.error(f"Failed to download thumbnail, status code: {response.status_code}")
+    except Exception as e:
+        logger.error(f"Error downloading thumbnail: {str(e)}")
 
 def scan_book_files() -> List[Dict[str, str]]:
     """Scan the current_books_dir for book files and folders and extract author/title info, including Author/Book structure"""
@@ -297,7 +329,7 @@ def update_download_progress(download_id: int, progress: float, total_size: int,
         logger.error(f"Error updating progress for download {download_id}: {str(e)}")
 
 
-def download_youtube_audio_async(download_id: int, youtube_url: str, output_path: str, book_title: str, author: str, youtube_title: str):
+def download_youtube_audio_async(download_id: int, youtube_url: str, output_path: str, book_title: str, author: str, youtube_title: str, audiobook_folder: str = None):
     """Asynchronous wrapper for downloading YouTube audio with progress tracking"""
     def progress_callback(progress, total_size, downloaded_size):
         # Update progress in database
@@ -319,6 +351,20 @@ def download_youtube_audio_async(download_id: int, youtube_url: str, output_path
             # Use the actual author name or "Unknown" in the title for the download function
             display_title = f"{book_title} by {author if author and author.strip() else 'Unknown'}"
             success = download_youtube_audio(youtube_url, output_path, display_title, progress_callback)
+            
+            # If successful, also download the thumbnail as cover.jpg
+            if success and audiobook_folder:
+                try:
+                    # Extract video ID from YouTube URL
+                    video_id = extract_video_id(youtube_url)
+                    if video_id:
+                        # Download the thumbnail
+                        thumbnail_url = f"https://i.ytimg.com/vi/{video_id}/maxresdefault.jpg"
+                        cover_path = os.path.join(audiobook_folder, "cover.jpg")
+                        download_thumbnail(thumbnail_url, cover_path)
+                except Exception as thumbnail_error:
+                    logger.error(f"Error downloading thumbnail: {str(thumbnail_error)}")
+                    # Continue even if thumbnail download fails
             
             # Update database status based on success
             history_item = History.query.get(download_id)
@@ -373,9 +419,15 @@ def download_audiobook():
         display_author = author if author and author.strip() else "Unknown"
         logger.info(f"Starting download: {book_title} by {display_author} from {youtube_url}")
         
-        # Create a unique filename for the download using the current download directory
-        safe_title = re.sub(r'[<>:"/\\|?*]', '_', f"{display_author} - {book_title} - {youtube_title}")
-        output_path = os.path.join(current_download_dir, f"{safe_title}.mp3")
+        # Create a unique folder name for the audiobook
+        safe_folder_name = re.sub(r'[<>:"/\\|?*]', '_', f"{book_title} by {display_author}")
+        audiobook_folder = os.path.join(current_download_dir, safe_folder_name)
+        
+        # Create the audiobook folder if it doesn't exist
+        os.makedirs(audiobook_folder, exist_ok=True)
+        
+        # Create the output path for the MP3 file inside the audiobook folder
+        output_path = os.path.join(audiobook_folder, f"{safe_folder_name}.mp3")
         
         # Add to history with pending status
         history_item = History(
@@ -383,7 +435,7 @@ def download_audiobook():
             author=author,  # Store the actual author value (could be empty)
             youtube_title=youtube_title,
             youtube_url=youtube_url,
-            download_path=output_path,
+            download_path=output_path,  # This will now point to the MP3 file inside the audiobook folder
             status='pending',
             progress=0.0,
             total_size=0,
@@ -397,7 +449,7 @@ def download_audiobook():
         # Start download in a separate thread
         thread = threading.Thread(
             target=download_youtube_audio_async,
-            args=(history_item.id, youtube_url, output_path, book_title, author, youtube_title)
+            args=(history_item.id, youtube_url, output_path, book_title, author, youtube_title, audiobook_folder)
         )
         thread.start()
         
