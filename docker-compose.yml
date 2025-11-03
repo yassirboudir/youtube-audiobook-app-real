@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: youtube-audiobook-app
     ports:
-      - "8080:8080"
+      - "5555:5555"
     volumes:
       - /home/yassir/ebooks/calibre-library:/app/books
       - /home/yassir/shared-sync/audiobooks:/app/downloads
