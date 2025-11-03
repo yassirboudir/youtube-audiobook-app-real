@@ -136,58 +136,10 @@ def scan_book_folders() -> List[Dict[str, str]]:
     # For backward compatibility, call the new more flexible function
     return scan_book_files()
 
-# Global variables to store the current paths
-current_books_dir = BOOKS_DIR
-current_download_dir = DOWNLOAD_DIR
-
 # ---------------------------- Routes ----------------------------
 @app.route('/')
 def home():
     return render_template('index.html')
-
-@app.route('/config')
-def get_config():
-    """Get current configuration"""
-    global current_books_dir, current_download_dir
-    return jsonify({
-        "books_dir": current_books_dir,
-        "download_dir": current_download_dir
-    })
-
-@app.route('/config', methods=['POST'])
-def set_config():
-    """Set new configuration paths"""
-    global current_books_dir, current_download_dir
-    try:
-        data = request.get_json()
-        new_books_dir = data.get("books_dir", current_books_dir)
-        new_download_dir = data.get("download_dir", current_download_dir)
-        
-        # Validate that the paths exist or can be created
-        if not os.path.isdir(new_books_dir):
-            # Try to create the directory if it doesn't exist
-            os.makedirs(new_books_dir, exist_ok=True)
-            if not os.path.isdir(new_books_dir):
-                return jsonify({"error": f"Books directory does not exist and could not be created: {new_books_dir}"}), 400
-        
-        if not os.path.isdir(new_download_dir):
-            # Try to create the directory if it doesn't exist
-            os.makedirs(new_download_dir, exist_ok=True)
-            if not os.path.isdir(new_download_dir):
-                return jsonify({"error": f"Download directory does not exist and could not be created: {new_download_dir}"}), 400
-        
-        # If both directories are valid, update the global variables
-        current_books_dir = new_books_dir
-        current_download_dir = new_download_dir
-        
-        return jsonify({
-            "ok": True,
-            "books_dir": current_books_dir,
-            "download_dir": current_download_dir
-        })
-    except Exception as e:
-        logger.error(f"Error updating config: {str(e)}")
-        return jsonify({"error": f"Error updating configuration: {str(e)}"}), 500
 
 @app.route('/health')
 def health():
@@ -422,6 +374,51 @@ def download_audiobook():
     except Exception as e:
         logger.error(f"Error starting download: {str(e)}", exc_info=True)
         return jsonify({"error": f"Error starting download: {str(e)}"}), 500
+
+# ---------------------------- Configuration Management ----------------------------
+@app.route('/config')
+def get_config():
+    """Get current configuration"""
+    global current_books_dir, current_download_dir
+    return jsonify({
+        "books_dir": current_books_dir,
+        "download_dir": current_download_dir
+    })
+
+@app.route('/config', methods=['POST'])
+def set_config():
+    """Set new configuration paths"""
+    global current_books_dir, current_download_dir
+    try:
+        data = request.get_json()
+        new_books_dir = data.get("books_dir", current_books_dir)
+        new_download_dir = data.get("download_dir", current_download_dir)
+        
+        # Validate that the paths exist or can be created
+        if not os.path.isdir(new_books_dir):
+            # Try to create the directory if it doesn't exist
+            os.makedirs(new_books_dir, exist_ok=True)
+            if not os.path.isdir(new_books_dir):
+                return jsonify({"error": f"Books directory does not exist and could not be created: {new_books_dir}"}), 400
+        
+        if not os.path.isdir(new_download_dir):
+            # Try to create the directory if it doesn't exist
+            os.makedirs(new_download_dir, exist_ok=True)
+            if not os.path.isdir(new_download_dir):
+                return jsonify({"error": f"Download directory does not exist and could not be created: {new_download_dir}"}), 400
+        
+        # If both directories are valid, update the global variables
+        current_books_dir = new_books_dir
+        current_download_dir = new_download_dir
+        
+        return jsonify({
+            "ok": True,
+            "books_dir": current_books_dir,
+            "download_dir": current_download_dir
+        })
+    except Exception as e:
+        logger.error(f"Error updating config: {str(e)}")
+        return jsonify({"error": f"Error updating configuration: {str(e)}"}), 500
 
 # ---------------------------- History ----------------------------
 @app.route('/history')
