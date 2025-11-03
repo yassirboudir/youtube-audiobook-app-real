@@ -12,7 +12,6 @@ services:
       - /home/yassir/ebooks/calibre-library:/app/books
       - /home/yassir/shared-sync/audiobooks:/app/downloads
       - ./instance:/app/instance
-      - ./.env:/app/.env:ro
     environment:
       - BOOKS_DIR=/app/books
       - DOWNLOAD_DIR=/app/downloads
